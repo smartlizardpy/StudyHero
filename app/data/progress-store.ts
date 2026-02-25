@@ -20,6 +20,7 @@ type ReviewSchedule = {
   reps: number;
   lapses: number;
 };
+export type ReviewRating = "again" | "hard" | "good" | "easy";
 
 type SessionSummary = {
   mode: "daily" | "quiz" | "review" | "drill";
@@ -262,6 +263,81 @@ export function getDueReviewStats(progress: ProgressState) {
   return { due, overdue };
 }
 
+export function getDueReviewCardIds(progress: ProgressState): string[] {
+  return Object.entries(progress.reviewSchedule)
+    .filter(([, schedule]) => new Date(schedule.dueAt).getTime() <= Date.now())
+    .sort((a, b) => new Date(a[1].dueAt).getTime() - new Date(b[1].dueAt).getTime())
+    .map(([cardId]) => cardId);
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+export function rateReviewCard(cardId: string, rating: ReviewRating): ProgressState {
+  const progress = loadProgress();
+  const current = progress.reviewSchedule[cardId];
+  if (!current) return progress;
+
+  const now = new Date();
+  let intervalDays = current.intervalDays;
+  let ease = current.ease;
+  let reps = current.reps;
+  let lapses = current.lapses;
+  let dueAt = nowIso();
+
+  if (rating === "again") {
+    intervalDays = 0;
+    ease = Math.max(1.3, ease - 0.2);
+    reps = 0;
+    lapses += 1;
+    dueAt = new Date(now.getTime() + 5 * 60 * 1000).toISOString();
+  }
+
+  if (rating === "hard") {
+    intervalDays = Math.max(1, Math.round((intervalDays || 1) * 1.2));
+    ease = Math.max(1.3, ease - 0.15);
+    reps += 1;
+    dueAt = addDays(now, intervalDays).toISOString();
+  }
+
+  if (rating === "good") {
+    intervalDays =
+      intervalDays === 0 ? 1 : Math.max(1, Math.round(intervalDays * ease));
+    ease = Math.min(2.8, ease + 0.05);
+    reps += 1;
+    dueAt = addDays(now, intervalDays).toISOString();
+  }
+
+  if (rating === "easy") {
+    intervalDays =
+      intervalDays === 0
+        ? 3
+        : Math.max(2, Math.round(intervalDays * ease * 1.3));
+    ease = Math.min(3.0, ease + 0.1);
+    reps += 1;
+    dueAt = addDays(now, intervalDays).toISOString();
+  }
+
+  const next: ProgressState = {
+    ...progress,
+    reviewSchedule: {
+      ...progress.reviewSchedule,
+      [cardId]: {
+        dueAt,
+        intervalDays,
+        ease,
+        reps,
+        lapses,
+      },
+    },
+  };
+
+  return saveProgress(next);
+}
+
 export function getWeakestTopicId(progress: ProgressState): TopicId {
   const entries = Object.entries(progress.topicStats) as Array<[TopicId, TopicStats]>;
 
@@ -298,6 +374,11 @@ export function useProgressStore() {
       },
       updateSettings: (settings: Partial<StudySettings>) => {
         const next = updateSettings(settings);
+        setProgress(next);
+        return next;
+      },
+      rateReviewCard: (cardId: string, rating: ReviewRating) => {
+        const next = rateReviewCard(cardId, rating);
         setProgress(next);
         return next;
       },
