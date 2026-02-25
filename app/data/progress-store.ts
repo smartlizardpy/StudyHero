@@ -6,6 +6,7 @@ type QuestionHistory = {
   correct: number;
   totalTimeMs: number;
   lastSeenAt: string | null;
+  lastResultCorrect: boolean | null;
 };
 
 type TopicStats = {
@@ -60,7 +61,13 @@ function defaultQuestionHistory(): Record<string, QuestionHistory> {
   return Object.fromEntries(
     questions.map((question) => [
       question.id,
-      { seen: 0, correct: 0, totalTimeMs: 0, lastSeenAt: null },
+      {
+        seen: 0,
+        correct: 0,
+        totalTimeMs: 0,
+        lastSeenAt: null,
+        lastResultCorrect: null,
+      },
     ]),
   );
 }
@@ -177,6 +184,7 @@ export function recordQuestionAttempt(params: {
     correct: 0,
     totalTimeMs: 0,
     lastSeenAt: null,
+    lastResultCorrect: null,
   };
 
   const topic = progress.topicStats[params.topicId] ?? { attempts: 0, correct: 0 };
@@ -190,6 +198,7 @@ export function recordQuestionAttempt(params: {
         correct: questionHistory.correct + (params.isCorrect ? 1 : 0),
         totalTimeMs: questionHistory.totalTimeMs + params.elapsedMs,
         lastSeenAt: nowIso(),
+        lastResultCorrect: params.isCorrect,
       },
     },
     topicStats: {
