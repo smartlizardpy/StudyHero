@@ -1,19 +1,22 @@
 import type { Route } from "./+types/review";
 import { StudyShell } from "../components/study-shell";
 import { flashcards, topicLabels } from "../data/study-content";
+import { getDueReviewStats, useProgressStore } from "../data/progress-store";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Review | 7. Sınıf Türkçe" }];
 }
 
 export default function Review() {
+  const { progress } = useProgressStore();
+  const { due, overdue } = getDueReviewStats(progress);
   const currentCard = flashcards[0];
 
   return (
     <StudyShell title="Spaced Review" subtitle="Anki-style runner" showTimer>
       <section className="max-w-3xl mx-auto rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_10px_26px_rgba(15,23,42,0.1)]">
         <p className="text-sm font-semibold text-slate-500">
-          Due today: {flashcards.length} | Overdue: 0
+          Due today: {due} | Overdue: {overdue}
         </p>
         <p className="mt-3 inline-flex rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold px-3 py-1">
           {topicLabels[currentCard.topicId]} · {currentCard.skill} · zorluk {currentCard.difficulty}

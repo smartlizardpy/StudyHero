@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import type { Route } from "./+types/quiz";
 import { StudyShell } from "../components/study-shell";
 import { questions } from "../data/study-content";
+import { useProgressStore } from "../data/progress-store";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Quiz | 7. Sınıf Türkçe" }];
@@ -11,11 +12,17 @@ export function meta({}: Route.MetaArgs) {
 
 export default function Quiz() {
   const navigate = useNavigate();
+  const { recordQuestionAttempt, completeSession } = useProgressStore();
   const items = useMemo(() => questions.slice(0, 5), []);
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
+  const [totalTimeMs, setTotalTimeMs] = useState(0);
+  const [questionStartMs, setQuestionStartMs] = useState(Date.now());
+  const [topicSessionStats, setTopicSessionStats] = useState<
+    Record<string, { attempts: number; correct: number }>
+  >({});
 
   const item = items[index];
   const accuracy = useMemo(() => Math.round((correctCount / items.length) * 100), [correctCount]);
@@ -23,9 +30,32 @@ export default function Quiz() {
   const onCheck = () => {
     if (selected === null) return;
     setChecked(true);
-    if (selected === item.correctIndex) {
+
+    const elapsedMs = Math.max(1000, Date.now() - questionStartMs);
+    const isCorrect = selected === item.correctIndex;
+
+    if (isCorrect) {
       setCorrectCount((x) => x + 1);
     }
+
+    setTotalTimeMs((current) => current + elapsedMs);
+    setTopicSessionStats((current) => {
+      const previous = current[item.topicId] ?? { attempts: 0, correct: 0 };
+      return {
+        ...current,
+        [item.topicId]: {
+          attempts: previous.attempts + 1,
+          correct: previous.correct + (isCorrect ? 1 : 0),
+        },
+      };
+    });
+
+    recordQuestionAttempt({
+      questionId: item.id,
+      topicId: item.topicId,
+      isCorrect,
+      elapsedMs,
+    });
   };
 
   const onNext = () => {
@@ -33,8 +63,30 @@ export default function Quiz() {
       setIndex((x) => x + 1);
       setSelected(null);
       setChecked(false);
+      setQuestionStartMs(Date.now());
       return;
     }
+
+    const sessionTopicEntries = Object.entries(topicSessionStats);
+    const sortedTopics = [...sessionTopicEntries].sort((a, b) => {
+      const aRatio = a[1].attempts === 0 ? 0 : a[1].correct / a[1].attempts;
+      const bRatio = b[1].attempts === 0 ? 0 : b[1].correct / b[1].attempts;
+      return bRatio - aRatio;
+    });
+
+    const improvedTopicId = sortedTopics[0]?.[0];
+    const worsenedTopicId = sortedTopics[sortedTopics.length - 1]?.[0];
+    const avgTimeMs = Math.round(totalTimeMs / items.length);
+
+    completeSession({
+      mode: "quiz",
+      accuracy,
+      avgTimeMs,
+      totalQuestions: items.length,
+      correctCount,
+      improvedTopicId: improvedTopicId as undefined | typeof item.topicId,
+      worsenedTopicId: worsenedTopicId as undefined | typeof item.topicId,
+    });
 
     navigate(`/results?accuracy=${accuracy}`);
   };

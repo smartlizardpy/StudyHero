@@ -3,7 +3,12 @@ import { ArrowRight, BrainCircuit, Flame, Target, Timer } from "lucide-react";
 import { Link } from "react-router";
 import type { Route } from "./+types/home";
 import { StudyShell } from "../components/study-shell";
-import { flashcards, questions, topicLabels } from "../data/study-content";
+import { topicLabels } from "../data/study-content";
+import {
+  getDueReviewStats,
+  getWeakestTopicId,
+  useProgressStore,
+} from "../data/progress-store";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -13,19 +18,20 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const { progress } = useProgressStore();
   const [daysUntilExam, setDaysUntilExam] = useState(0);
-  const readiness = 64;
-  const dueCards = flashcards.length;
+  const readiness = progress.readiness;
+  const { due: dueCards } = getDueReviewStats(progress);
   const suggestedDrills = 2;
-  const weakestTopic = topicLabels[questions[0].topicId];
+  const weakestTopic = topicLabels[getWeakestTopicId(progress)];
 
   useEffect(() => {
     const today = new Date();
-    const examDate = new Date("2026-04-06");
+    const examDate = new Date(progress.settings.examDate);
     const diffTime = Math.max(examDate.getTime() - today.getTime(), 0);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     setDaysUntilExam(diffDays);
-  }, []);
+  }, [progress.settings.examDate]);
 
   const minutesPerDay = useMemo(() => {
     if (daysUntilExam <= 0) return 45;

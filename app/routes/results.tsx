@@ -1,19 +1,34 @@
-import { Link } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import type { Route } from "./+types/results";
 import { StudyShell } from "../components/study-shell";
+import { topicLabels } from "../data/study-content";
+import { useProgressStore } from "../data/progress-store";
 
 export function meta({}: Route.MetaArgs) {
   return [{ title: "Results | 7. Sınıf Türkçe" }];
 }
 
 export default function Results() {
+  const { progress } = useProgressStore();
+  const [searchParams] = useSearchParams();
+  const session = progress.lastSession;
+  const fallbackAccuracy = Number(searchParams.get("accuracy") ?? 0);
+  const accuracy = session?.accuracy ?? fallbackAccuracy;
+  const avgTime = session ? `${Math.round(session.avgTimeMs / 1000)}s` : "-";
+  const improved = session?.improvedTopicId
+    ? topicLabels[session.improvedTopicId]
+    : "N/A";
+  const worsened = session?.worsenedTopicId
+    ? topicLabels[session.worsenedTopicId]
+    : "N/A";
+
   return (
     <StudyShell title="Results" subtitle="Performance and next action">
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Stat label="Accuracy" value="72%" />
-        <Stat label="Avg time / question" value="18s" />
-        <Stat label="Improved" value="Ek Fiil" />
-        <Stat label="Worsened" value="Fiilde Yapı" />
+        <Stat label="Accuracy" value={`${accuracy}%`} />
+        <Stat label="Avg time / question" value={avgTime} />
+        <Stat label="Improved" value={improved} />
+        <Stat label="Worsened" value={worsened} />
       </section>
 
       <Link
