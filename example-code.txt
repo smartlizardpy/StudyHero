@@ -1,0 +1,407 @@
+import React, { useState, useEffect } from 'react';
+import {
+BookOpen,
+BrainCircuit,
+Calendar,
+ChevronRight,
+Trophy,
+ArrowLeft,
+CheckCircle2,
+XCircle,
+Lightbulb
+} from 'lucide-react';
+
+// --- DATA: QUIZ QUESTIONS ---
+const quizQuestions = [
+{
+id: 1,
+topic: "Ek Fiil",
+question: "Aşağıdaki altı çizili sözcüklerin hangisinde ek fiil (ek eylem) isim soylu bir sözcüğü yüklem yapma göreviyle kullanılmıştır?",
+options: [
+"Dün akşam erkenden uyudu.",
+"Yarın sinemaya gidecekmiş.",
+"Sınıfın en çalışkan öğrencisi oydu.",
+"Soruların hepsini hızlıca çözdü."
+],
+correctAnswer: 2,
+explanation: "'Oydu' sözcüğünün kökü 'o' zamiridir (isim soylu). Ek fiilin idi (hikaye) halini alarak yüklem olmuştur. Diğerleri çekimli fiildir."
+},
+{
+id: 2,
+topic: "Zarflar (Belirteçler)",
+question: "Aşağıdaki cümlelerin hangisinde durum zarfı kullanılmıştır?",
+options: [
+"Yaz tatilinde köye gideceğiz.",
+"Öğretmenini dikkatlice dinliyordu.",
+"İçeri girip kapıyı kapattı.",
+"Dün çok fazla yemek yemişim."
+],
+correctAnswer: 1,
+explanation: "Fiile sorulan 'Nasıl?' sorusunun cevabı durum zarfıdır. Nasıl dinliyordu? -> Dikkatlice."
+},
+{
+id: 3,
+topic: "Fiilde Yapı",
+question: "Aşağıdaki cümlelerin hangisinin yüklemi yapısına göre 'birleşik' bir fiildir?",
+options: [
+"Bütün gün odasını temizledi.",
+"Bahar gelince ağaçlar çiçek açtı.",
+"Bu zor soruyu hemen çözüverdi.",
+"Kitabın son sayfasını da okumuş."
+],
+correctAnswer: 2,
+explanation: "'Çözüverdi' fiili 'çözmek' ve 'vermek' (tezlik fiili) kelimelerinin birleşmesiyle oluşmuş kurallı birleşik bir fiildir."
+},
+{
+id: 4,
+topic: "Söz Sanatları",
+question: "'Güneş, dağların ardından bize gülümseyerek günaydın diyordu.' cümlesinde hangi söz sanatı kullanılmıştır?",
+options: [
+"Kişileştirme (Teşhis)",
+"Benzetme (Teşbih)",
+"Abartma (Mübalağa)",
+"Karşıtlık (Tezat)"
+],
+correctAnswer: 0,
+explanation: "İnsana ait olan 'gülümsemek' ve 'günaydın demek' özellikleri insan dışı bir varlık olan Güneş'e verilerek kişileştirme yapılmıştır."
+},
+{
+id: 5,
+topic: "Cümlede Anlam",
+question: "Aşağıdaki cümlelerin hangisinde 'koşul-sonuç' ilişkisi vardır?",
+options: [
+"Yağmur yağdığı için maç iptal edildi.",
+"Düzenli çalışırsan sınavda başarılı olursun.",
+"Seni görmek maksadıyla buralara kadar geldim.",
+"Havalar soğuyunca sobayı kurduk."
+],
+correctAnswer: 1,
+explanation: "Başarılı olmasının bir şartı (koşulu) vardır: Düzenli çalışmak. '-sa/-se' ekiyle koşul anlamı katılmıştır."
+}
+];
+
+// --- DATA: FLASHCARDS ---
+const flashcards = [
+{
+title: "Ek Fiil (Ek Eylem)",
+content: "İki görevi vardır:\n1. İsim ve isim soylu sözcüklere gelerek onları yüklem yapar. (Örn: Hava bugün çok soğuktu.)\n2. Basit zamanlı fiillere gelerek onları birleşik zamanlı yapar. (Örn: Gel-iyor-du)",
+color: "bg-blue-100 text-blue-900 border-blue-300"
+},
+{
+title: "Zarflar (Belirteçler)",
+content: "Fiilleri, fiilimsileri, sıfatları veya kendi türünden sözcükleri durum, zaman, miktar, yer-yön ve soru bakımından belirten sözcüklerdir.\nDurum (Nasıl?), Zaman (Ne zaman?), Miktar (Ne kadar?), Yer-Yön (Nereye?).",
+color: "bg-green-100 text-green-900 border-green-300"
+},
+{
+title: "Fiilde Yapı",
+content: "1. Basit Fiil: Yapım eki almamış fiiller. (geldi)\n2. Türemiş Fiil: Yapım eki almış fiiller. (baş-la-dı)\n3. Birleşik Fiil: En az iki sözcüğün birleşmesi. (yardım etti, yapabildi, başvurmuş)",
+color: "bg-amber-100 text-amber-900 border-amber-300"
+}
+];
+
+export default function App() {
+const [currentView, setCurrentView] = useState('dashboard'); // dashboard, quiz, flashcards, results
+const [daysUntilExam, setDaysUntilExam] = useState(0);
+
+// Quiz State
+const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+const [selectedAnswer, setSelectedAnswer] = useState(null);
+const [isAnswerChecked, setIsAnswerChecked] = useState(false);
+const [score, setScore] = useState(0);
+
+// Calculate days until estimated exam date (April 6, 2026)
+useEffect(() => {
+const today = new Date('2026-02-25'); // Using the current context date
+const examDate = new Date('2026-04-06');
+const diffTime = Math.abs(examDate - today);
+const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+setDaysUntilExam(diffDays);
+}, []);
+
+const resetQuiz = () => {
+setCurrentQuestionIndex(0);
+setSelectedAnswer(null);
+setIsAnswerChecked(false);
+setScore(0);
+setCurrentView('quiz');
+};
+
+const handleAnswerSelect = (index) => {
+if (isAnswerChecked) return;
+setSelectedAnswer(index);
+};
+
+const checkAnswer = () => {
+if (selectedAnswer === null) return;
+setIsAnswerChecked(true);
+if (selectedAnswer === quizQuestions[currentQuestionIndex].correctAnswer) {
+setScore(score + 100 / quizQuestions.length);
+}
+};
+
+const nextQuestion = () => {
+if (currentQuestionIndex < quizQuestions.length - 1) {
+setCurrentQuestionIndex(currentQuestionIndex + 1);
+setSelectedAnswer(null);
+setIsAnswerChecked(false);
+} else {
+setCurrentView('results');
+}
+};
+
+// --- COMPONENT: Dashboard ---
+const Dashboard = () => (
+<div className="flex flex-col space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+{/* Welcome Banner */}
+<div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl p-6 text-white shadow-lg">
+<h2 className="text-2xl font-bold mb-2">Merhaba Şampiyon! 🚀</h2>
+<p className="opacity-90">2. Dönem 1. Yazılılarına harika bir şekilde hazırlanmaya hazır mısın?</p>
+
+<div className="mt-6 bg-white/20 rounded-2xl p-4 flex items-center justify-between backdrop-blur-sm border border-white/20">
+<div className="flex items-center space-x-3">
+<Calendar className="w-8 h-8 text-indigo-100" />
+<div>
+<p className="text-sm text-indigo-100 font-medium">Tahmini Sınav Tarihi</p>
+<p className="font-bold text-xl">Nisan İlk Hafta</p>
+</div>
+</div>
+<div className="text-right">
+<p className="text-sm text-indigo-100 font-medium">Kalan Süre</p>
+<p className="font-bold text-3xl text-yellow-300">~{daysUntilExam} Gün</p>
+</div>
+</div>
+</div>
+
+{/* Action Buttons */}
+<h3 className="text-lg font-bold text-slate-800 px-2">Bugün Ne Çalışalım?</h3>
+<div className="grid grid-cols-1 gap-4">
+
+<button
+onClick={() => setCurrentView('flashcards')}
+className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-all active:scale-95 group"
+>
+<div className="flex items-center space-x-4">
+<div className="bg-amber-100 p-3 rounded-xl">
+<BookOpen className="w-6 h-6 text-amber-600" />
+</div>
+<div className="text-left">
+<h4 className="font-bold text-slate-800 text-lg group-hover:text-amber-600 transition-colors">Hızlı Tekrar</h4>
+<p className="text-sm text-slate-500">Ek Fiil, Zarflar, Yapı özetleri</p>
+</div>
+</div>
+<ChevronRight className="text-slate-300" />
+</button>
+
+<button
+onClick={resetQuiz}
+className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between hover:shadow-md transition-all active:scale-95 group"
+>
+<div className="flex items-center space-x-4">
+<div className="bg-green-100 p-3 rounded-xl">
+<BrainCircuit className="w-6 h-6 text-green-600" />
+</div>
+<div className="text-left">
+<h4 className="font-bold text-slate-800 text-lg group-hover:text-green-600 transition-colors">Sınav Provası</h4>
+<p className="text-sm text-slate-500">Sınav tarzı sorular çöz</p>
+</div>
+</div>
+<ChevronRight className="text-slate-300" />
+</button>
+
+</div>
+</div>
+);
+
+// --- COMPONENT: Flashcards ---
+const Flashcards = () => (
+<div className="flex flex-col h-full animate-in fade-in duration-300">
+<div className="flex items-center mb-6">
+<button onClick={() => setCurrentView('dashboard')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
+<ArrowLeft className="text-slate-600" />
+</button>
+<h2 className="text-xl font-bold text-slate-800 ml-2">Hızlı Tekrar Kartları</h2>
+</div>
+
+<div className="space-y-4">
+{flashcards.map((card, idx) => (
+<div key={idx} className={`p-5 rounded-2xl border ${card.color}`}>
+<h3 className="font-bold text-lg mb-2 flex items-center">
+<Lightbulb className="w-5 h-5 mr-2 opacity-70" />
+{card.title}
+</h3>
+<p className="whitespace-pre-line text-sm md:text-base leading-relaxed opacity-90">
+{card.content}
+</p>
+</div>
+))}
+</div>
+
+<button
+onClick={() => setCurrentView('dashboard')}
+className="mt-8 bg-slate-800 text-white p-4 rounded-xl font-bold w-full active:scale-95 transition-transform"
+>
+Anladım, Geri Dön
+</button>
+</div>
+);
+
+// --- COMPONENT: Quiz ---
+const Quiz = () => {
+const question = quizQuestions[currentQuestionIndex];
+const progress = ((currentQuestionIndex) / quizQuestions.length) * 100;
+
+return (
+<div className="flex flex-col h-full animate-in fade-in duration-300">
+<div className="flex items-center justify-between mb-4">
+<button onClick={() => setCurrentView('dashboard')} className="p-2 -ml-2 hover:bg-slate-100 rounded-full">
+<ArrowLeft className="text-slate-600" />
+</button>
+<span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm font-bold">
+Soru {currentQuestionIndex + 1}/{quizQuestions.length}
+</span>
+</div>
+
+{/* Progress Bar */}
+<div className="w-full bg-slate-200 h-2 rounded-full mb-6">
+<div className="bg-indigo-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+</div>
+
+<div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-6">
+<span className="text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2 block">
+{question.topic}
+</span>
+<h3 className="text-lg font-bold text-slate-800 leading-snug">
+{question.question}
+</h3>
+</div>
+
+<div className="space-y-3">
+{question.options.map((option, index) => {
+let btnClass = "w-full text-left p-4 rounded-xl border-2 transition-all ";
+
+if (!isAnswerChecked) {
+btnClass += selectedAnswer === index
+? "border-indigo-500 bg-indigo-50"
+: "border-slate-200 hover:border-indigo-300 bg-white";
+} else {
+if (index === question.correctAnswer) {
+btnClass += "border-green-500 bg-green-50";
+} else if (index === selectedAnswer) {
+btnClass += "border-red-500 bg-red-50";
+} else {
+btnClass += "border-slate-200 bg-white opacity-50";
+}
+}
+
+return (
+<button
+key={index}
+onClick={() => handleAnswerSelect(index)}
+disabled={isAnswerChecked}
+className={btnClass}
+>
+<div className="flex justify-between items-center">
+<span className={`font-medium ${isAnswerChecked && index === question.correctAnswer ? 'text-green-700' : 'text-slate-700'}`}>
+{String.fromCharCode(65 + index)}) {option}
+</span>
+{isAnswerChecked && index === question.correctAnswer && <CheckCircle2 className="text-green-500 w-5 h-5" />}
+{isAnswerChecked && index === selectedAnswer && index !== question.correctAnswer && <XCircle className="text-red-500 w-5 h-5" />}
+</div>
+</button>
+);
+})}
+</div>
+
+{isAnswerChecked && (
+<div className="mt-6 p-4 bg-indigo-50 rounded-xl border border-indigo-100 animate-in slide-in-from-bottom-2">
+<p className="text-sm text-indigo-900">
+<span className="font-bold block mb-1">Çözüm:</span>
+{question.explanation}
+</p>
+</div>
+)}
+
+<div className="mt-auto pt-6">
+{!isAnswerChecked ? (
+<button
+onClick={checkAnswer}
+disabled={selectedAnswer === null}
+className={`w-full p-4 rounded-xl font-bold transition-all ${
+selectedAnswer !== null
+? 'bg-indigo-600 text-white shadow-md hover:bg-indigo-700 active:scale-95'
+: 'bg-slate-200 text-slate-400 cursor-not-allowed'
+}`}
+>
+Cevapla
+</button>
+) : (
+<button
+onClick={nextQuestion}
+className="w-full p-4 rounded-xl font-bold bg-slate-800 text-white shadow-md hover:bg-slate-900 active:scale-95 transition-all flex items-center justify-center"
+>
+{currentQuestionIndex < quizQuestions.length - 1 ? 'Sonraki Soru' : 'Sonuçları Gör'}
+<ChevronRight className="ml-2 w-5 h-5" />
+</button>
+)}
+</div>
+</div>
+);
+};
+
+// --- COMPONENT: Results ---
+const Results = () => (
+<div className="flex flex-col items-center justify-center h-full text-center animate-in zoom-in-95 duration-500 py-10">
+<div className="bg-yellow-100 p-6 rounded-full mb-6">
+<Trophy className="w-16 h-16 text-yellow-500" />
+</div>
+
+<h2 className="text-3xl font-bold text-slate-800 mb-2">Tebrikler!</h2>
+<p className="text-slate-500 mb-8">Sınav provasını tamamladın.</p>
+
+<div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 w-full mb-8">
+<p className="text-sm text-slate-400 font-bold uppercase tracking-wider mb-2">Başarı Puanın</p>
+<p className={`text-6xl font-black ${score > 70 ? 'text-green-500' : 'text-amber-500'}`}>
+{Math.round(score)}
+</p>
+</div>
+
+<button
+onClick={() => setCurrentView('dashboard')}
+className="w-full bg-indigo-600 text-white p-4 rounded-xl font-bold shadow-md hover:bg-indigo-700 active:scale-95 transition-all"
+>
+Ana Ekrana Dön
+</button>
+</div>
+);
+
+return (
+<div className="min-h-screen bg-slate-50 font-sans sm:p-6 md:p-12 flex items-center justify-center">
+{/* Mobile-sized container for realism */}
+<div className="w-full max-w-md bg-slate-50 sm:bg-white sm:shadow-2xl sm:rounded-[2.5rem] sm:border-8 border-slate-800 overflow-hidden relative flex flex-col h-screen sm:h-[850px]">
+
+{/* App Header (Small top bar) */}
+<div className="bg-white px-6 py-4 flex items-center justify-between border-b border-slate-100 sticky top-0 z-10">
+<div className="flex items-center space-x-2">
+<div className="bg-indigo-600 p-2 rounded-lg">
+<BookOpen className="w-5 h-5 text-white" />
+</div>
+<h1 className="font-bold text-slate-800 tracking-tight">7. Sınıf Türkçe</h1>
+</div>
+<div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-xs font-bold text-slate-500">
+MEB
+</div>
+</div>
+
+{/* Scrollable Content Area */}
+<div className="flex-1 overflow-y-auto p-6 scroll-smooth">
+{currentView === 'dashboard' && <Dashboard />}
+{currentView === 'flashcards' && <Flashcards />}
+{currentView === 'quiz' && <Quiz />}
+{currentView === 'results' && <Results />}
+</div>
+
+</div>
+</div>
+);
+}
